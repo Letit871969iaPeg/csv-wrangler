@@ -38,6 +38,20 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _open_output(path, /):
+    """Open the output file for writing, or return stdout if path is None.
+
+    Returns a (file_object, should_close) tuple so callers know whether they
+    are responsible for closing the stream.
+    """
+    if path is None:
+        return sys.stdout, False
+    try:
+        return open(path, "w", newline="", encoding="utf-8"), True
+    except OSError as exc:
+        raise OSError(f"Cannot open output file '{path}': {exc}") from exc
+
+
 def run(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -58,7 +72,12 @@ def run(argv=None) -> int:
         print(f"Error: input CSV not found: {args.input_csv}", file=sys.stderr)
         return 1
 
-    out_file = open(args.output, "w", newline="", encoding="utf-8") if args.output else sys.stdout
+    try:
+        out_file, should_close = _open_output(args.output)
+    except OSError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        in_file.close()
+        return 1
 
     try:
         reader = csv.DictReader(in_file)
@@ -89,7 +108,7 @@ def run(argv=None) -> int:
             print("Warning: no rows written (all filtered or empty input).", file=sys.stderr)
     finally:
         in_file.close()
-        if args.output and out_file is not sys.stdout:
+        if should_close:
             out_file.close()
 
     return 0
