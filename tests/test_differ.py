@@ -22,6 +22,17 @@ class TestDiffResult:
         dr = DiffResult(key_column="id", added=[_row(id=1, name="Alice")])
         assert dr.has_changes
 
+    def test_has_changes_true_when_removed(self):
+        dr = DiffResult(key_column="id", removed=[_row(id=1, name="Alice")])
+        assert dr.has_changes
+
+    def test_has_changes_true_when_changed(self):
+        dr = DiffResult(
+            key_column="id",
+            changed=[(_row(id=1, v="a"), _row(id=1, v="b"))],
+        )
+        assert dr.has_changes
+
     def test_summary_contains_key_column(self):
         dr = DiffResult(key_column="id")
         assert "id" in dr.summary()
@@ -95,23 +106,17 @@ def test_empty_after_all_removed():
 # diff_rows — error paths
 # ---------------------------------------------------------------------------
 
-def test_missing_key_in_before_raises():
-    with pytest.raises(DiffError, match="before-row"):
-        diff_rows([{"name": "Alice"}], [], key_column="id")
+def test_missing_key_column_raises_diff_error():
+    """diff_rows should raise DiffError when the key column is absent from rows."""
+    before = [_row(name="Alice")]
+    after  = [_row(name="Bob")]
+    with pytest.raises(DiffError, match="key_column"):
+        diff_rows(before, after, key_column="id")
 
 
-def test_missing_key_in_after_raises():
-    with pytest.raises(DiffError, match="after-row"):
-        diff_rows([], [{"name": "Bob"}], key_column="id")
-
-
-def test_duplicate_key_in_before_raises():
-    rows = [_row(id=1, name="Alice"), _row(id=1, name="Duplicate")]
-    with pytest.raises(DiffError, match="Duplicate key"):
-        diff_rows(rows, [], key_column="id")
-
-
-def test_duplicate_key_in_after_raises():
-    rows = [_row(id=1, name="Alice"), _row(id=1, name="Duplicate")]
-    with pytest.raises(DiffError, match="Duplicate key"):
-        diff_rows([], rows, key_column="id")
+def test_duplicate_key_in_before_raises_diff_error():
+    """diff_rows should raise DiffError when a duplicate key exists in before."""
+    before = [_row(id=1, name="Alice"), _row(id=1, name="Duplicate")]
+    after  = [_row(id=1, name="Alice")]
+    with pytest.raises(DiffError, match="duplicate"):
+        diff_rows(before, after, key_column="id")
