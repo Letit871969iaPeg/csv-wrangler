@@ -73,3 +73,28 @@ def profile_rows(
             col_values[col].append(row.get(col, ""))
 
     return {col: profile_column(col, vals) for col, vals in col_values.items()}
+
+
+def summary_report(profiles: dict[str, ColumnProfile]) -> str:
+    """Return a human-readable summary table of column profiles.
+
+    Args:
+        profiles: Mapping returned by :func:`profile_rows`.
+
+    Returns:
+        A formatted multi-line string with one row per column.
+    """
+    if not profiles:
+        return "No columns to report."
+
+    header = f"{'Column':<20} {'Total':>7} {'Fill':>7} {'Unique':>7} {'MinLen':>7} {'MaxLen':>7}"
+    separator = "-" * len(header)
+    lines = [header, separator]
+    for col, prof in profiles.items():
+        min_len = "-" if prof.min_length is None else str(prof.min_length)
+        max_len = "-" if prof.max_length is None else str(prof.max_length)
+        lines.append(
+            f"{col:<20} {prof.total:>7} {prof.fill_rate:>7.1%} "
+            f"{prof.unique_count:>7} {min_len:>7} {max_len:>7}"
+        )
+    return "\n".join(lines)
