@@ -35,13 +35,23 @@ def add_mask_subcommand(subparsers: argparse._SubParsersAction) -> None:  # type
 
 
 def _parse_specs(raw_specs: List[str]) -> List[MaskSpec]:
+    """Parse raw spec strings into MaskSpec objects.
+
+    Each spec string has the format: column[:mode[:keep[:char]]]
+    Raises ValueError if the 'keep' field is not a valid integer.
+    """
     specs: List[MaskSpec] = []
     for raw in raw_specs:
         parts = raw.split(":")
         column = parts[0]
         mode = parts[1] if len(parts) > 1 else "full"
-        keep = int(parts[2]) if len(parts) > 2 else 4
         char = parts[3] if len(parts) > 3 else "*"
+        try:
+            keep = int(parts[2]) if len(parts) > 2 else 4
+        except ValueError:
+            raise ValueError(
+                f"Invalid 'keep' value {parts[2]!r} in spec {raw!r}: must be an integer."
+            )
         specs.append(MaskSpec(column=column, mode=mode, char=char, keep=keep))
     return specs
 
@@ -49,7 +59,7 @@ def _parse_specs(raw_specs: List[str]) -> List[MaskSpec]:
 def _run_mask(args: argparse.Namespace) -> int:
     try:
         specs = _parse_specs(args.specs)
-    except MaskError as exc:
+    except (MaskError, ValueError) as exc:
         print(f"mask: configuration error: {exc}", file=sys.stderr)
         return 1
 
