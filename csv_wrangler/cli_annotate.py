@@ -30,6 +30,10 @@ def _parse_specs(raw: List[str]) -> List[AnnotateSpec]:
         col, expr_src = item.split("=", 1)
         col = col.strip()
         expr_src = expr_src.strip()
+        if not col:
+            raise AnnotateError(
+                f"invalid spec {item!r}: column name must not be empty"
+            )
         try:
             code = compile(expr_src, "<annotate>", "eval")
         except SyntaxError as exc:
@@ -91,15 +95,3 @@ def _run_annotate(args: argparse.Namespace) -> int:
                     writer.writeheader()
                 writer.writerow(row)
         except AnnotateError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 1
-    finally:
-        if out is not sys.stdout:
-            out.close()
-
-    print(
-        f"annotated {result.row_count} rows; "
-        f"added {len(result.added_columns)} column(s)",
-        file=sys.stderr,
-    )
-    return 0
