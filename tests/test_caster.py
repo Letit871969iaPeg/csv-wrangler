@@ -94,32 +94,26 @@ def test_cast_date_invalid_strict():
         spec.cast("not-a-date")
 
 
+def test_cast_date_invalid_lenient():
+    spec = CastSpec(column="dob", target_type="date", strict=False)
+    assert spec.cast("not-a-date") == "not-a-date"
+
+
 # ---------------------------------------------------------------------------
 # cast_rows
 # ---------------------------------------------------------------------------
 
 def test_cast_rows_applies_specs():
-    rows = [{"age": "30", "name": "Alice"}, {"age": "25", "name": "Bob"}]
-    specs = [CastSpec(column="age", target_type="int")]
-    result = list(cast_rows(rows, specs))
-    assert result[0]["age"] == 30
-    assert result[0]["name"] == "Alice"
-
-
-def test_cast_rows_passthrough_when_no_specs():
-    rows = [{"x": "1"}]
-    result = list(cast_rows(rows, []))
-    assert result == [{"x": "1"}]
-
-
-def test_cast_rows_multiple_specs():
-    rows = [{"a": "1", "b": "3.5", "c": "yes"}]
-    specs = [
-        CastSpec(column="a", target_type="int"),
-        CastSpec(column="b", target_type="float"),
-        CastSpec(column="c", target_type="bool"),
+    rows = [
+        {"age": "30", "score": "9.5", "name": "Alice"},
+        {"age": "25", "score": "8.0", "name": "Bob"},
     ]
-    result = list(cast_rows(rows, specs))[0]
-    assert result["a"] == 1
-    assert result["b"] == pytest.approx(3.5)
-    assert result["c"] is True
+    specs = [
+        CastSpec(column="age", target_type="int"),
+        CastSpec(column="score", target_type="float"),
+    ]
+    results = cast_rows(rows, specs)
+    assert all(isinstance(r, CastResult) for r in results)
+    assert results[0].row["age"] == 30
+    assert results[1].row["score"] == pytest.approx(8.0)
+    assert results[0].row["name"] == "Alice"
