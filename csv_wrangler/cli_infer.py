@@ -27,6 +27,7 @@ def add_infer_subcommand(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _iter_csv(path: str):
+    """Yield rows as dicts from a CSV file path, or stdin if path is '-'."""
     fh = sys.stdin if path == "-" else open(path, newline="", encoding="utf-8")
     try:
         yield from csv.DictReader(fh)
@@ -36,7 +37,16 @@ def _iter_csv(path: str):
 
 
 def _run_infer(args: argparse.Namespace) -> int:
-    rows = list(_iter_csv(args.input))
+    """Execute the infer subcommand, printing inferred column types."""
+    try:
+        rows = list(_iter_csv(args.input))
+    except FileNotFoundError:
+        print(f"Error: file not found: {args.input}", file=sys.stderr)
+        return 1
+    except OSError as exc:
+        print(f"Error reading file: {exc}", file=sys.stderr)
+        return 1
+
     if not rows:
         print("No data found.", file=sys.stderr)
         return 1
