@@ -78,10 +78,15 @@ def _evaluate_filter(cell: str, op: str, value: str) -> bool:
 def apply_rules(rules: List[Rule], rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Apply a list of rules to every row, returning surviving rows."""
     result: List[Dict[str, Any]] = []
-    for row in rows:
+    for row_index, row in enumerate(rows):
         current = dict(row)  # work on a copy
         for rule in rules:
-            current = apply_rule(rule, current)
+            try:
+                current = apply_rule(rule, current)
+            except ExecutionError as exc:
+                raise ExecutionError(
+                    f"Row {row_index}: {exc}"
+                ) from exc
             if current is None:
                 break
         if current is not None:
