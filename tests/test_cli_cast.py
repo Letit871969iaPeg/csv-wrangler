@@ -32,6 +32,23 @@ def _read_csv(path: Path):
         return list(csv.DictReader(fh))
 
 
+def _parse_cast_args(tmp_path: Path, src_content: str, extra_args: list[str]):
+    """Write *src_content* to a temp CSV and return parsed args for the cast subcommand.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+        src_content: Raw CSV text to write as the input file.
+        extra_args: Additional CLI arguments appended after the source path.
+
+    Returns:
+        The ``argparse.Namespace`` produced by parsing the constructed argument list.
+    """
+    src = tmp_path / "in.csv"
+    _write_csv(src, src_content)
+    parser = _make_parser()
+    return parser.parse_args(["cast", str(src)] + extra_args)
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -100,3 +117,16 @@ def test_cast_bool_column(tmp_path):
     rows = _read_csv(dst)
     assert rows[0]["active"] == "True"
     assert rows[1]["active"] == "False"
+
+
+def test_cast_float_column(tmp_path):
+    """Casting a column to float should round-trip through CSV as a float string."""
+    dst = tmp_path / "out.csv"
+    args = _parse_cast_args(
+        tmp_path, "price\n1.5\n2.75\n", ["-o", str(dst), "-c", "price:float"]
+    )
+    rc = _run_cast(args)
+    assert rc == 0
+    rows = _read_csv(dst)
+    assert float(rows[0]["price"]) == pytest.approx(1.5)
+    assert float(rows[1]["price"]) == pytest.approx(2.75)
